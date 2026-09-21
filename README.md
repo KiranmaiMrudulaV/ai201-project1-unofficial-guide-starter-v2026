@@ -114,30 +114,40 @@ Laundry costs $1.75 wash, $1.75 dry, app-based. On noise: moderate; the building
 
 ## Sample Answer
 
-<!-- One complete question and answer, pasted as text, with the source line
-     visible. Milestone 4. -->
-
-**Question:**
+**Question:** What's the wait time at Kestrel Commons during the lunch rush?
 
 **Answer:**
 
 ```
+The wait time at Kestrel Commons is 20 to 25 minutes between 12:15 and 1:00.
+This information comes from the documents `dining_kestrel_commons.txt` and
+`dining_kestrel_commons_followup.txt`.
+
+Sources retrieved: dining_halden_hall_followup.txt, dining_kestrel_commons.txt,
+dining_kestrel_commons_followup.txt, dining_pellew_dining_hall_followup.txt,
+dining_the_ridgeway_cafe_followup.txt
 ```
 
-**My relevance cutoff:**
+**My relevance cutoff:** 0.6 (the default — kept as-is, see reasoning below)
 
-<!-- The number you set in config.py, and how you got there.
-
-     You ran five questions your corpus covers and the five in OUT_OF_SCOPE
-     that it clearly doesn't, and wrote down the best distance for each. What
-     did those two groups look like? Where was the gap? Put the actual numbers
-     here — the table below wants all ten rows.
-
-     Milestone 4. -->
+I ran my 5 in-corpus test questions and the 5 `OUT_OF_SCOPE` questions through
+`python app.py retrieve` and recorded the best (lowest) distance for each.
+There's a clean gap with no overlap: in-corpus questions top out at 0.375,
+out-of-scope questions start at 0.825. A cutoff of 0.6 sits comfortably in the
+middle of that gap, so I left it at the default rather than moving it.
 
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| Does work-study income count against financial aid the same way a regular campus job does? | Yes | 0.156 |
+| How many hours a week does MATH 220 typically take, and is the workload even across the semester? | Yes | 0.316 |
+| What's the wait time at Kestrel Commons during the lunch rush? | Yes | 0.197 |
+| By what time does The Atrium get picked clean, and when does it restock? | Yes | 0.375 |
+| Which floors in Aldridge Hall are enforced as quiet floors? | Yes | 0.302 |
+| What is the capital of Mongolia? | No | 0.825 |
+| How do I change the oil in a diesel engine? | No | 0.934 |
+| Who won the 1994 World Cup? | No | 0.886 |
+| What is the recommended dosage of ibuprofen for a headache? | No | 0.844 |
+| How do I write a for loop in Rust? | No | 0.896 |
 
 ## How I Used AI
 

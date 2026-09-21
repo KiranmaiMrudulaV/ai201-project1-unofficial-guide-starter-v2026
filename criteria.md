@@ -57,8 +57,14 @@ in at least 4 of 5 tries.
      just keep five of them, or the "4 of 5" above has nothing to be 4 of. -->
 
 **Why this target:**
-<!-- What did your distances look like when you set the cutoff in Milestone 4?
-     Was there a clean gap, or did the two groups overlap? -->
+I ran all 5 of my in-corpus test questions and all 5 `OUT_OF_SCOPE` questions
+through `app.py retrieve` and recorded the best distance for each. My
+in-corpus questions topped out at 0.375; my out-of-scope questions started at
+0.825 — a clean gap with no overlap between the two groups. With a cutoff of
+0.6 sitting in the middle of that gap, I'd expect the gate to get this right
+essentially every time, but I'm leaving room for 1 of 5 in case a future
+out-of-scope question I haven't tried lands closer to the boundary than the
+five I tested.
 
 ---
 
