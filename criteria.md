@@ -55,23 +55,19 @@ in at least 4 of 5 tries.
 
 ---
 
-## 4. Something about your chunks
+## 4. Chunks read as complete thoughts
 
-<!-- YOU WRITE THIS ONE.
-
-     How would you know if your chunks were the right size? Name something
-     countable or observable.
-
-     Examples of the right shape — don't copy these, they should come from
-     what you actually saw in Milestone 3:
-       - "At least 4 of 5 sampled chunks read as a complete thought, with no
-          sentence cut in half at either end."
-       - "No chunk is shorter than 200 characters, since anything below that
-          in my corpus turned out to be a heading with no content under it." -->
-
-
+At least 5 of 5 sampled chunks read as a complete thought, with no sentence
+cut off at the start or end.
 
 **Why this target:**
+My `campus_life` documents are short (about 317 characters on average) and
+each one covers a single topic — the default chunker turned 88 documents into
+88 chunks because almost nothing hit the 800-character cutoff. Given how short
+and self-contained these posts already are, a chunker that respects
+document/paragraph boundaries should be able to produce a clean split every
+time, not just most of the time — so I'm not giving myself room for a broken
+chunk.
 
 
 
