@@ -1,6 +1,6 @@
 # The Unofficial Guide
 
-<!-- Replace this line with your name and which corpus you picked. -->
+**Kiranmai Mrudula Vardhiboyina** — corpus: `campus_life`
 
 > **This file is your submission.** Fill it in as you go — most sections get
 > written during the milestone that produces them, not at the end.
@@ -21,11 +21,15 @@
 
 ## What This Does
 
-<!-- Three or four sentences. Which corpus you picked, and the kinds of
-     questions your system answers. Write it for someone who has never seen
-     this repo.
-
-     Milestone 5. -->
+This is a retrieval-augmented question-answering system built on `campus_life`,
+a corpus of 88 short, student-written posts about dorms, dining halls,
+courses, and administrative policies at a fictional university. Ask it a
+specific question — like how long the wait is at a particular dining hall,
+what a course's workload looks like, or whether work-study income counts
+against financial aid — and it retrieves the most relevant posts, answers
+using only what's in them, and names the source file(s) it pulled from. If a
+question falls outside what the corpus covers, it says so instead of
+guessing.
 
 ## Chunking Strategy
 
@@ -151,18 +155,23 @@ middle of that gap, so I left it at the default rather than moving it.
 
 ## How I Used AI
 
-<!-- Two specific moments. For each: what you asked for, what came back, and
-     what you changed about it.
+**1.** I asked Claude to help draft my 5 test questions after reading through
+the `campus_life` document filenames. Its first pass proposed 5 questions
+covering housing, quiet floors, printing quota, the campus shuttle, and one
+dining hall. I didn't like that spread — I wanted more coverage of dining
+halls, course workload, and financial aid specifically — so I asked it to
+swap those topics in. It came back with a revised set (work-study vs.
+financial aid, MATH 220 workload, two separate dining-hall questions, and
+Aldridge Hall noise), which is what ended up in `questions.py`.
 
-     "I asked Claude to write the chunking function from my notes. It ignored
-     the overlap, so I added that myself" is the level of detail we're after.
-     "I used AI to help me code" is not.
-
-     Milestone 5. -->
-
-**1.**
-
-**2.**
+**2.** When drafting criterion 4 (about chunk quality), Claude walked me
+through turning my vague instinct — "chunks shouldn't cut off before giving
+the whole picture" — into a testable target. When it first asked me to pick
+numbers, I went with a cautious "4 of 5" chunks reading as a complete
+thought. After thinking about *why* — that my documents are short and
+single-topic and a boundary-respecting chunker should split cleanly every
+time — I changed it to a stricter 5 of 5, since I couldn't come up with a
+real reason to expect a failure.
 
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
