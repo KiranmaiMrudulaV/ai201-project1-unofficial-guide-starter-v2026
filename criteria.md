@@ -23,8 +23,11 @@ For at least 4 of my 5 test questions, the retrieved chunks include one that
 contains the answer.
 
 **Why this target:**
-<!-- e.g. "One of my questions is about a topic only two documents mention, so
-     I expect that one to be hard." -->
+Two of my five questions (the Kestrel Commons wait time and The Atrium restock
+time) need information pulled from two separate files — a post and its
+followup — to be fully correct, not just one. That makes them riskier than the
+other three, which each have their answer sitting in a single file. I'm
+leaving room for one of those cross-file questions to come back incomplete.
 
 ---
 
@@ -33,8 +36,12 @@ contains the answer.
 Every answer the system produces names at least one source document.
 
 **Why this target:**
-<!-- Why all five and not four? What about your setup makes that achievable —
-     or what would have to go wrong for it not to be? -->
+This isn't a retrieval-difficulty problem like criterion 1 — it's whether the
+prompt template in `generate.py` reliably includes a source line whenever it
+produces an answer at all. Naming a source is necessary to even check whether
+that source is valid (criterion 5), so there's no acceptable case where an
+answer appears with no source attached. That's why this one is 5 of 5 and not
+4 of 5.
 
 ---
 
@@ -73,19 +80,18 @@ chunk.
 
 ---
 
-## 5. Your choice
+## 5. Cited sources actually contain the answer
 
-<!-- YOU WRITE THIS ONE TOO.
-
-     Pick something you actually care about getting right. It could be about
-     speed, about refusals, about a particular kind of question your corpus
-     handles badly, about source attribution being correct rather than merely
-     present — anything, as long as it names a number or an observable
-     outcome. -->
-
-
+For all 5 of my 5 test questions, the cited source document actually contains
+the answer — not just a file that's topically related to the question.
 
 **Why this target:**
+Criterion 2 only checks that *a* source gets named, not that it's the right
+one, so this is the check that actually matters. I expect 5 of 5 to be
+achievable because my `campus_life` documents are narrowly single-topic —
+each file covers one specific thing (one dining hall, one course, one admin
+policy) — so there's little overlapping content that could make a
+wrong-but-plausible file get cited instead of the correct one.
 
 
 
