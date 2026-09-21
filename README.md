@@ -175,8 +175,8 @@ real reason to expect a failure.
 
 ## Stretch Features
 
-I'm adding two stretch features: **metadata filtering** and **conversational
-memory**.
+I'm adding three stretch features: **metadata filtering**, **conversational
+memory**, and **a second embedding model**.
 
 ### Metadata filtering
 
@@ -247,6 +247,40 @@ The second question never says "Kestrel Commons" — on its own it would be
 retrieval-ambiguous (every dining hall has weekend hours). The answer is
 correct only because the retrieval query and the prompt both carried the
 first turn's context forward.
+
+### A second embedding model
+
+I installed `sentence-transformers` and swapped `EMBEDDING_MODEL` in
+`config.py` from the bundled `all-MiniLM-L6-v2` (384 dimensions) to
+`all-mpnet-base-v2` (768 dimensions, generally a stronger sentence-embedding
+model), indexed it into a separate `--variant mpnet` so the original index
+stays untouched, then ran the same 10 questions from Milestone 4 against
+both.
+
+| Question | In corpus? | MiniLM distance | mpnet distance | Moved |
+|---|---|---|---|---|
+| Work-study vs financial aid | Yes | 0.156 | 0.111 | closer |
+| MATH 220 workload | Yes | 0.316 | 0.306 | closer (slightly) |
+| Kestrel Commons wait time | Yes | 0.197 | 0.202 | farther (slightly) |
+| The Atrium restock time | Yes | 0.375 | 0.451 | farther |
+| Aldridge Hall quiet floors | Yes | 0.302 | 0.185 | closer |
+| Capital of Mongolia | No | 0.825 | 0.813 | closer (slightly) |
+| Diesel oil change | No | 0.934 | 0.816 | closer |
+| 1994 World Cup | No | 0.886 | 0.913 | farther |
+| Ibuprofen dosage | No | 0.844 | 0.852 | farther (slightly) |
+| Rust for-loop | No | 0.896 | 0.792 | closer |
+
+**What moved:** mpnet pulled several out-of-scope questions closer to 0
+(diesel oil change: 0.934 → 0.816; Rust for-loop: 0.896 → 0.792) — it seems
+to spread distances less aggressively overall than MiniLM does on this
+corpus. It also pushed one in-corpus question farther away (The Atrium:
+0.375 → 0.451). Net effect: the in-corpus/out-of-scope gap narrowed from
+[0.375, 0.825] (width 0.450) under MiniLM to [0.451, 0.792] (width 0.341)
+under mpnet. My existing threshold of 0.6 still happens to sit inside the
+narrower gap, so I didn't have to move it for this specific set of 10
+questions — but the margin for error is smaller, and a corpus where mpnet's
+gap doesn't happen to straddle 0.6 would need a real re-measurement, not an
+assumption that the same cutoff carries over.
 
 ---
 
