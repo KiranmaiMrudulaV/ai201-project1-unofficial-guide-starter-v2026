@@ -282,7 +282,12 @@ Rules:
 - Be brief. Two or three sentences is usually enough."""
 
 
-def build_prompt(question: str, results) -> str:
+def build_prompt(
+    question: str,
+    results,
+    previous_question: str | None = None,
+    previous_answer: str | None = None,
+) -> str:
     """
     Assemble the grounded prompt out of retrieved chunks.
 
@@ -290,18 +295,37 @@ def build_prompt(question: str, results) -> str:
     being sent — `python app.py ask "..." --show-prompt` prints exactly what
     this returns. Reading it once is the fastest way to see that retrieval,
     not the model, decides what an answer can possibly be based on.
+
+    `previous_question`/`previous_answer` are the prior turn in a
+    conversation (stretch feature: conversational memory). They're included
+    only so the model can resolve a follow-up like "is it faster on
+    weekends?" — the answer still has to come from the documents below, not
+    from the previous answer's text.
     """
     context = "\n\n".join(
         f"[from {r.source}]\n{r.text}" for r in results
     )
+    history = ""
+    if previous_question and previous_answer:
+        history = (
+            f"Previous turn in this conversation (for context only — your "
+            f"answer must still come from the documents below):\n"
+            f"Q: {previous_question}\nA: {previous_answer}\n\n---\n\n"
+        )
     return (
-        f"Documents:\n\n{context}\n\n"
+        f"{history}Documents:\n\n{context}\n\n"
         f"---\n\nQuestion: {question}\n\n"
         f"Answer using only the documents above, and name the file you used."
     )
 
 
-def answer_from_chunks(question: str, results, cache: bool = True) -> str:
+def answer_from_chunks(
+    question: str,
+    results,
+    cache: bool = True,
+    previous_question: str | None = None,
+    previous_answer: str | None = None,
+) -> str:
     """
     Build a grounded prompt out of retrieved chunks and send it.
 
@@ -309,5 +333,5 @@ def answer_from_chunks(question: str, results, cache: bool = True) -> str:
     first — it has already decided these chunks are close enough to be worth
     answering from.
     """
-    prompt = build_prompt(question, results)
+    prompt = build_prompt(question, results, previous_question, previous_answer)
     return generate(prompt, system=GROUNDING_INSTRUCTION, cache=cache)

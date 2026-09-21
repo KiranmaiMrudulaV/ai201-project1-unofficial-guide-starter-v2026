@@ -154,6 +154,7 @@ def cmd_retrieve(args):
         top_k=args.top_k or config.TOP_K,
         corpus=args.corpus or config.CORPUS,
         variant=args.variant,
+        category=args.category,
     )
 
     if not results:
@@ -181,6 +182,9 @@ def ask_pipeline(
     variant="default",
     top_k=None,
     threshold=None,
+    category=None,
+    previous_question=None,
+    previous_answer=None,
     on_gate=None,
     on_prompt=None,
 ):
@@ -198,16 +202,26 @@ def ask_pipeline(
     decision as soon as it's made, and `on_prompt` is handed the assembled
     prompt just before it goes out — that's how `--show-prompt` shows you the
     prompt while the model is still thinking rather than after.
+
+    `category` narrows retrieval to one topic (stretch: metadata filtering).
+    `previous_question`/`previous_answer` are the prior turn in a
+    conversation (stretch: conversational memory) — they're folded into the
+    retrieval query too, so a follow-up that doesn't repeat the topic (e.g.
+    "is it faster on weekends?") can still find the right chunks.
     """
     from store import search
     import gate
     from generate import answer_from_chunks, build_prompt
 
+    retrieval_query = (
+        f"{previous_question} {question}" if previous_question else question
+    )
     results = search(
-        question,
+        retrieval_query,
         top_k=top_k or config.TOP_K,
         corpus=corpus or config.CORPUS,
         variant=variant,
+        category=category,
     )
     decision = gate.check(results, threshold=threshold)
     if on_gate is not None:
@@ -226,12 +240,14 @@ def ask_pipeline(
         outcome["answer"] = gate.REFUSAL
         return outcome
 
-    prompt = build_prompt(question, results)
+    prompt = build_prompt(question, results, previous_question, previous_answer)
     if on_prompt is not None:
         on_prompt(prompt)
 
     outcome["prompt"] = prompt
-    outcome["answer"] = answer_from_chunks(question, results)
+    outcome["answer"] = answer_from_chunks(
+        question, results, previous_question=previous_question, previous_answer=previous_answer
+    )
     outcome["sources"] = sorted({r.source for r in results})
     return outcome
 
@@ -242,6 +258,9 @@ def _ask_one(
     variant,
     top_k,
     threshold,
+    category=None,
+    previous_question=None,
+    previous_answer=None,
     show_distances=True,
     show_prompt=False,
 ):
@@ -269,6 +288,9 @@ def _ask_one(
         variant=variant,
         top_k=top_k,
         threshold=threshold,
+        category=category,
+        previous_question=previous_question,
+        previous_answer=previous_answer,
         on_gate=print_distances if show_distances else None,
         on_prompt=print_prompt if show_prompt else None,
     )
@@ -285,6 +307,7 @@ def _ask_one(
 def cmd_ask(args):
     corpus = args.corpus or config.CORPUS
     import generate as gen
+    import gate
 
     try:
         if args.question:
@@ -294,10 +317,16 @@ def cmd_ask(args):
                 args.variant,
                 args.top_k,
                 args.threshold,
+                category=args.category,
                 show_prompt=args.show_prompt,
             )
         else:
             print("Ask a question, or press Enter on an empty line to quit.\n")
+            print("Each answer can build on the one before it (stretch:")
+            print("conversational memory) — e.g. ask about one dining hall,")
+            print("then follow up with 'is it faster on weekends?'\n")
+            previous_question = None
+            previous_answer = None
             while True:
                 try:
                     question = input("> ").strip()
@@ -306,14 +335,19 @@ def cmd_ask(args):
                     break
                 if not question:
                     break
-                _ask_one(
+                answer = _ask_one(
                     question,
                     corpus,
                     args.variant,
                     args.top_k,
                     args.threshold,
+                    category=args.category,
+                    previous_question=previous_question,
+                    previous_answer=previous_answer,
                     show_prompt=args.show_prompt,
                 )
+                if answer != gate.REFUSAL:
+                    previous_question, previous_answer = question, answer
     finally:
         print(gen.usage())
 
@@ -360,12 +394,20 @@ def build_parser():
     p_ret = sub.add_parser("retrieve", help="show distances only (Milestone 4)")
     p_ret.add_argument("question")
     p_ret.add_argument("--top-k", type=int)
+    p_ret.add_argument(
+        "--category",
+        help="narrow results to one topic, e.g. dining, housing, course, admin (stretch: metadata filtering)",
+    )
     p_ret.set_defaults(func=cmd_retrieve)
 
     p_ask = sub.add_parser("ask", help="ask a question")
     p_ask.add_argument("question", nargs="?")
     p_ask.add_argument("--top-k", type=int)
     p_ask.add_argument("--threshold", type=float, help="override the gate cutoff")
+    p_ask.add_argument(
+        "--category",
+        help="narrow results to one topic, e.g. dining, housing, course, admin (stretch: metadata filtering)",
+    )
     p_ask.add_argument(
         "--show-prompt",
         action="store_true",

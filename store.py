@@ -134,6 +134,18 @@ def _client():
     )
 
 
+def category_of(source: str) -> str:
+    """
+    Topic category for a chunk, derived from its filename prefix.
+
+    campus_life filenames are consistently "topic_rest_of_name.txt" (e.g.
+    "admin_housing_lottery.txt", "dining_the_atrium.txt"), so the prefix
+    before the first underscore is a reliable, free category label — no
+    separate metadata file needed. Stretch feature: metadata filtering.
+    """
+    return source.split("_", 1)[0]
+
+
 def build_index(
     chunks: list[Chunk],
     corpus: str | None = None,
@@ -170,7 +182,12 @@ def build_index(
             documents=[c.text for c in window],
             embeddings=embed([c.text for c in window]),
             metadatas=[
-                {"source": c.source, "index": c.index, "produced_by": c.produced_by}
+                {
+                    "source": c.source,
+                    "index": c.index,
+                    "produced_by": c.produced_by,
+                    "category": category_of(c.source),
+                }
                 for c in window
             ],
         )
@@ -183,11 +200,16 @@ def search(
     top_k: int | None = None,
     corpus: str | None = None,
     variant: str = "default",
+    category: str | None = None,
 ) -> list[Result]:
     """
     Retrieve the chunks closest in meaning to a question.
 
     Returns them nearest-first, each with its distance.
+
+    `category` narrows the search to one topic (e.g. "dining", "housing") via
+    Chroma's `where` clause, using the category metadata set in build_index.
+    Stretch feature: metadata filtering.
     """
     top_k = top_k or config.TOP_K
     name = config.collection_name(corpus, variant)
@@ -202,6 +224,7 @@ def search(
     raw = collection.query(
         query_embeddings=embed([question]),
         n_results=min(top_k, collection.count()),
+        where={"category": category} if category else None,
     )
 
     results: list[Result] = []

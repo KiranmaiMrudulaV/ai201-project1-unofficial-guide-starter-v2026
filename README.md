@@ -173,10 +173,80 @@ single-topic and a boundary-respecting chunker should split cleanly every
 time — I changed it to a stricter 5 of 5, since I couldn't come up with a
 real reason to expect a failure.
 
-<!-- ── Stretch features ─────────────────────────────────────────────────────
-     Doing one? Say so here BEFORE you start. A feature this README never
-     claims earns nothing.
-     ───────────────────────────────────────────────────────────────────────── -->
+## Stretch Features
+
+I'm adding two stretch features: **metadata filtering** and **conversational
+memory**.
+
+### Metadata filtering
+
+Every `campus_life` filename follows a consistent `topic_restofname.txt`
+pattern (`admin_...`, `course_...`, `dining_...`, `housing_...`, etc.), so I
+derive a `category` from the filename prefix at index time
+(`store.py::category_of`) and store it as Chroma metadata on every chunk.
+`search()` takes an optional `category` argument and passes it through as a
+`where` clause; the CLI exposes it as `--category` on both `retrieve` and
+`ask`.
+
+**Same query, with and without the filter:**
+
+`python app.py retrieve "What costs money here that people don't expect?"`
+
+```
+1   0.6984     admin_printing_quota.txt
+2   0.7043     housing_calder_annexe.txt
+3   0.7752     housing_fenwick_court.txt
+4   0.7865     housing_aldridge_hall.txt
+5   0.7972     money_textbooks.txt
+```
+
+`python app.py retrieve "What costs money here that people don't expect?" --category housing`
+
+```
+1   0.7043     housing_calder_annexe.txt
+2   0.7752     housing_fenwick_court.txt
+3   0.7865     housing_aldridge_hall.txt
+4   0.8030     housing_old_brewhouse.txt
+5   0.8033     housing_innisfree_hall.txt
+```
+
+**What changed:** unfiltered, the top result is `admin_printing_quota.txt`
+and `money_textbooks.txt` also makes the top 5. Filtered to `housing`, both
+of those drop out entirely and the list fills back out with the next-closest
+housing documents instead — the filter is genuinely restricting the search
+space, not just re-sorting the same five results.
+
+### Conversational memory
+
+The interactive `ask` loop (`python app.py ask` with no question argument)
+now tracks the previous turn's question and answer. Two things use it: the
+retrieval query becomes `f"{previous_question} {question}"` (so a follow-up
+that doesn't repeat the topic can still retrieve the right chunks), and
+`generate.py::build_prompt` prepends the previous Q&A to the model's prompt
+as context, while the grounding instruction still requires the actual answer
+to come from the retrieved documents, not from the prior answer's text.
+
+**Two-turn exchange, same session:**
+
+```
+> What's the wait time at Kestrel Commons during the lunch rush?
+  (best distance 0.197, cutoff 0.6)
+
+The wait time at Kestrel Commons is 20 to 25 minutes between 12:15 and 1:00.
+This information comes from the documents `dining_kestrel_commons.txt` and
+`dining_kestrel_commons_followup.txt`.
+
+> What are the hours on weekends?
+  (best distance 0.250, cutoff 0.6)
+
+The hours on weekends for Kestrel Commons are 9:00am to 8:00pm. This comes
+from the document `dining_kestrel_commons.txt`.
+```
+
+The second question never says "Kestrel Commons" — on its own it would be
+retrieval-ambiguous (every dining hall has weekend hours). The answer is
+correct only because the retrieval query and the prompt both carried the
+first turn's context forward.
 
 ---
 
