@@ -292,46 +292,89 @@ assumption that the same cutoff carries over.
 
 ## Run Log — Before
 
-<!-- Your five criteria, three runs each. `python run_eval.py --label before`
-     runs the questions, puts the OUT_OF_SCOPE ones through the gate, and
-     writes it all into results/ for you. Targets come from criteria.md; the
-     verdict column is your call.
-
-     Criterion 3 is measured in one deterministic pass rather than three, so
-     the same number goes in all three run columns. That's correct, not lazy.
-
-     Milestone 1. -->
+Produced by `python run_eval.py --label before` (`results/run_2026-09-23_1936.md`,
+the scored run — two earlier attempts in `results/` predate a working
+`scorer.py` and are unscored), plus `python app.py chunks -n 5` for
+criterion 4, which isn't exercised by `run_eval.py` at all. Criteria 3 and 4
+are each measured in one deterministic pass rather than three — the gate is
+a comparison against a fixed number, and the chunker produces the same
+chunks every time — so the same number goes in all three run columns for
+those two.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks read as complete thoughts | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 5. Cited sources actually contain the answer | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-<!-- Underneath, paste the REAL output for each criterion from one of your
-     runs — the actual text your system produced, not a description of it.
-     Name the file and function that produced it. -->
+**Real output, one per criterion:**
+
+**Criterion 1** — `store.py::search`, retrieval for "What's the wait time at Kestrel Commons during the lunch rush?":
+```
+Best distance: 0.1967 (passed the gate)
+Sources retrieved: dining_halden_hall_followup.txt, dining_kestrel_commons.txt,
+dining_kestrel_commons_followup.txt, dining_pellew_dining_hall_followup.txt,
+dining_the_ridgeway_cafe_followup.txt
+```
+Opened `dining_kestrel_commons.txt` directly and confirmed "20 to 25 minutes"
+is written there — the top retrieved chunk genuinely contains the answer.
+
+**Criterion 2** — `generate.py::answer_from_chunks`, answer for the same question:
+```
+The wait time at Kestrel Commons is 20 to 25 minutes between 12:15 and 1:00.
+This information comes from the documents `dining_kestrel_commons.txt` and
+`dining_kestrel_commons_followup.txt`.
+```
+Source named explicitly, every run.
+
+**Criterion 3** — `run_eval.py::check_out_of_scope` + `gate.py::check`:
+```
+What is the capital of Mongolia? | 0.825 | refused
+How do I change the oil in a diesel engine? | 0.934 | refused
+Who won the 1994 World Cup? | 0.886 | refused
+What is the recommended dosage of ibuprofen for a headache? | 0.844 | refused
+How do I write a for loop in Rust? | 0.896 | refused
+```
+5 of 5 refused, cutoff 0.6.
+
+**Criterion 4** — `chunker.py::split_documents`, from `python app.py chunks -n 5`:
+```
+Chunk 3 | source: course_hist_118_workload.txt#0 | produced by: chunker.py::split_documents
+
+Workload for HIST 118 Modern World History
+
+People keep asking so: a lot of reading, about 120 pages a week, but no problem sets. That's real time, not optimistic time.
+
+It's front-loaded — the first month is heavier than the rest, partly because you're learning the format.
+```
+Reads as a complete thought — no sentence cut off at either end. Same for
+the other 4 sampled chunks.
+
+**Criterion 5** — for "How many hours a week does MATH 220 typically take,
+and is the workload even across the semester?":
+```
+MATH 220 typically takes 6 to 8 hours a week, and the workload is
+front-loaded, meaning the first month is heavier than the rest (source:
+`course_math_220_workload.txt` and `course_math_220.txt`).
+```
+Opened `course_math_220_workload.txt` and confirmed both "6 to 8 hours" and
+"front-loaded" are genuinely written there, not just topically adjacent.
 
 ## Verdicts
 
-<!-- MET or MISSED for each of the five, against the target you wrote last
-     unit — not a new one. Plus a sentence on how you decided. That sentence
-     matters most where it was close.
-
-     If your target said 4 of 5 and your runs came out 4, 3, 4, that's a MISS.
-     The target has to hold, not show up occasionally.
-
-     Milestone 2. -->
-
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+| 1 | Retrieved chunk contains the answer | MET | Opened the actual source file for each of my 5 questions and confirmed the fact was genuinely present in the top retrieved chunk. 5/5, stable across all 3 runs since retrieval is deterministic — clears the 4/5 target. |
+| 2 | Every answer names a source | MET | Read all 15 answer instances (5 questions × 3 runs) in the run log; every one names an explicit filename. 5/5 every run. |
+| 3 | Gate stops out-of-corpus questions | MET | All 5 `OUT_OF_SCOPE` questions were refused (best distances 0.825–0.934, all above the 0.6 cutoff). 5/5 clears the 4/5 target. |
+| 4 | Chunks read as complete thoughts | MET | Sampled 5 chunks via `app.py chunks -n 5` and read each one myself — none started or ended mid-sentence. 5/5. |
+| 5 | Cited sources actually contain the answer | MET | For each of my 5 questions, opened the specific file(s) the answer cited and confirmed the fact was actually there, not just a plausible-sounding file. 5/5. |
+
+No misses. All 5 targets held on every run, not just most of them — I
+checked each one by hand against the actual source documents rather than
+trusting the retrieved/cited filenames at face value.
 
 ## Diagnoses
 
