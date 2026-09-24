@@ -378,23 +378,44 @@ trusting the retrieved/cited filenames at face value.
 
 ## Diagnoses
 
-<!-- For each miss: which stage caused it, and how. The stage alone isn't
-     enough — you need the mechanism.
+No criterion was missed. All 5 held on all 3 runs. Rather than manufacture a
+failure that didn't happen, here's an honest read of which target was too
+easy, and a harder test that actually finds a real weakness.
 
-     Not a diagnosis: "Question 3 didn't work."
-     A diagnosis:     "Question 3 asks about laundry costs. The answer is in
-                       one sentence that got split across two chunks, so
-                       neither chunk on its own contains it."
+**Criterion 3 was the safest target, and I can show why rather than just
+assert it.** In `criteria.md`, my stated reason for allowing 1 of 5 misses
+was: "I'm leaving room for 1 of 5 in case a future out-of-scope question I
+haven't tried lands closer to the boundary than the five I tested." My
+actual 5 `OUT_OF_SCOPE` questions (capital of Mongolia, diesel oil changes,
+1994 World Cup, ibuprofen dosage, Rust for-loops) are about as far from
+campus life as a question can get — nothing close to the boundary I said I
+was worried about. So I built and ran a harder test: 5 questions that sound
+plausible for `campus_life` but aren't actually covered by any of the 88
+documents —
 
-     The five stages: loading → chunking → embedding → retrieval → generation.
+1. "What GPA do I need to make the Dean's list?" — distance 0.564
+2. "Is there a shuttle to the airport?" — distance 0.643
+3. "Can I get a refund on unused meal swipes?" — distance 0.543
+4. "Do any professors offer extra credit at the end of the semester?" — distance 0.531
+5. "Is there a bike-share program on campus?" — distance 0.694
 
-     Look for a pattern. If three misses all ask about numbers, that's one
-     problem, not three.
+**The mechanism, precisely:** with `THRESHOLD = 0.6`, the gate (`gate.py::check`)
+only refused 2 of these 5 (0.643 and 0.694) — the other 3 (0.564, 0.543,
+0.531) are all under the cutoff, so `gate.py` let them through to the model.
+The reason this didn't produce a wrong answer to the user is that the
+*second* layer of defense caught it — `generate.py`'s `GROUNDING_INSTRUCTION`
+correctly made the model say "I don't have enough information" for all 3,
+even with irrelevant chunks in front of it. So end-to-end the user experience
+was fine, but the gate itself — which is literally what criterion 3 names —
+only did its job 2 of 5 times on this harder test, not 5 of 5. It was riding
+on the prompt layer as a safety net rather than actually separating covered
+from uncovered questions on its own.
 
-     Missed nothing? Say so, then say honestly whether your targets were set
-     low, and which one you'd tighten and to what.
-
-     Milestone 3. -->
+**Tighter target:** at least 4 of 5 boundary-adjacent (plausible but
+uncovered) questions refused *by the gate itself*, not by the combined
+system. Measured as above, the current system gets 2 of 5 — a miss against
+this tighter bar, even though it's a MET against the original criterion 3 as
+written.
 
 ## The Improvement
 
