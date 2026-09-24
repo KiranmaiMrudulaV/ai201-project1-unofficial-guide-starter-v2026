@@ -155,6 +155,7 @@ def cmd_retrieve(args):
         corpus=args.corpus or config.CORPUS,
         variant=args.variant,
         category=args.category,
+        hybrid=args.hybrid,
     )
 
     if not results:
@@ -185,6 +186,7 @@ def ask_pipeline(
     category=None,
     previous_question=None,
     previous_answer=None,
+    hybrid=False,
     on_gate=None,
     on_prompt=None,
 ):
@@ -222,6 +224,7 @@ def ask_pipeline(
         corpus=corpus or config.CORPUS,
         variant=variant,
         category=category,
+        hybrid=hybrid,
     )
     decision = gate.check(results, threshold=threshold)
     if on_gate is not None:
@@ -261,6 +264,7 @@ def _ask_one(
     category=None,
     previous_question=None,
     previous_answer=None,
+    hybrid=False,
     show_distances=True,
     show_prompt=False,
 ):
@@ -291,6 +295,7 @@ def _ask_one(
         category=category,
         previous_question=previous_question,
         previous_answer=previous_answer,
+        hybrid=hybrid,
         on_gate=print_distances if show_distances else None,
         on_prompt=print_prompt if show_prompt else None,
     )
@@ -318,6 +323,7 @@ def cmd_ask(args):
                 args.top_k,
                 args.threshold,
                 category=args.category,
+                hybrid=args.hybrid,
                 show_prompt=args.show_prompt,
             )
         else:
@@ -344,6 +350,7 @@ def cmd_ask(args):
                     category=args.category,
                     previous_question=previous_question,
                     previous_answer=previous_answer,
+                    hybrid=args.hybrid,
                     show_prompt=args.show_prompt,
                 )
                 if answer != gate.REFUSAL:
@@ -398,6 +405,11 @@ def build_parser():
         "--category",
         help="narrow results to one topic, e.g. dining, housing, course, admin (stretch: metadata filtering)",
     )
+    p_ret.add_argument(
+        "--hybrid",
+        action="store_true",
+        help="rerank with BM25 keyword overlap via reciprocal rank fusion (unit 2 stretch: hybrid search)",
+    )
     p_ret.set_defaults(func=cmd_retrieve)
 
     p_ask = sub.add_parser("ask", help="ask a question")
@@ -407,6 +419,11 @@ def build_parser():
     p_ask.add_argument(
         "--category",
         help="narrow results to one topic, e.g. dining, housing, course, admin (stretch: metadata filtering)",
+    )
+    p_ask.add_argument(
+        "--hybrid",
+        action="store_true",
+        help="rerank with BM25 keyword overlap via reciprocal rank fusion (unit 2 stretch: hybrid search)",
     )
     p_ask.add_argument(
         "--show-prompt",

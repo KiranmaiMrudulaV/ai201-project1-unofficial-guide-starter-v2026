@@ -201,6 +201,7 @@ def search(
     corpus: str | None = None,
     variant: str = "default",
     category: str | None = None,
+    hybrid: bool = False,
 ) -> list[Result]:
     """
     Retrieve the chunks closest in meaning to a question.
@@ -210,6 +211,13 @@ def search(
     `category` narrows the search to one topic (e.g. "dining", "housing") via
     Chroma's `where` clause, using the category metadata set in build_index.
     Stretch feature: metadata filtering.
+
+    `hybrid` reranks the semantic candidates with BM25 keyword overlap,
+    combined via reciprocal rank fusion — unit 2 stretch: hybrid search. It
+    pulls a larger semantic candidate pool, then reorders which of those
+    make the final top-k using both signals. The distances reported are
+    still the true cosine distances from Chroma, so the gate's threshold
+    stays comparable to a semantic-only run.
     """
     top_k = top_k or config.TOP_K
     name = config.collection_name(corpus, variant)
@@ -221,26 +229,60 @@ def search(
             f"No index called '{name}'. Run `python app.py index` first."
         ) from exc
 
+    pool = max(top_k * 4, 20) if hybrid else top_k
     raw = collection.query(
         query_embeddings=embed([question]),
-        n_results=min(top_k, collection.count()),
+        n_results=min(pool, collection.count()),
         where={"category": category} if category else None,
     )
 
+    ids = raw["ids"][0]
+    docs = raw["documents"][0]
+    metas = raw["metadatas"][0]
+    dists = raw["distances"][0]
+
+    if hybrid and ids:
+        order = _hybrid_rerank(question, ids, docs, dists, top_k)
+    else:
+        order = list(range(min(top_k, len(ids))))
+
     results: list[Result] = []
-    for text, meta, distance in zip(
-        raw["documents"][0], raw["metadatas"][0], raw["distances"][0]
-    ):
+    for i in order:
         results.append(
             Result(
-                text=text,
-                source=str(meta.get("source", "unknown")),
-                label=f"{meta.get('source', 'unknown')}#{meta.get('index', 0)}",
-                distance=float(distance),
-                produced_by=str(meta.get("produced_by", "unknown")),
+                text=docs[i],
+                source=str(metas[i].get("source", "unknown")),
+                label=f"{metas[i].get('source', 'unknown')}#{metas[i].get('index', 0)}",
+                distance=float(dists[i]),
+                produced_by=str(metas[i].get("produced_by", "unknown")),
             )
         )
     return results
+
+
+def _hybrid_rerank(question, ids, docs, dists, top_k) -> list[int]:
+    """
+    Reciprocal rank fusion of the semantic order (already sorted by `dists`)
+    with a BM25 ranking over the same candidate pool. Returns the indices
+    into `ids`/`docs`/`dists` for the fused top-k, nearest-first.
+    """
+    from rank_bm25 import BM25Okapi
+
+    tokenized_docs = [d.lower().split() for d in docs]
+    bm25 = BM25Okapi(tokenized_docs)
+    bm25_scores = bm25.get_scores(question.lower().split())
+    bm25_order = sorted(range(len(ids)), key=lambda i: -bm25_scores[i])
+    bm25_rank = {i: r for r, i in enumerate(bm25_order)}
+    semantic_rank = {i: r for r, i in enumerate(range(len(ids)))}  # already dist-sorted
+
+    k_rrf = 60
+    fused = sorted(
+        range(len(ids)),
+        key=lambda i: -(
+            1.0 / (k_rrf + semantic_rank[i]) + 1.0 / (k_rrf + bm25_rank[i])
+        ),
+    )
+    return fused[:top_k]
 
 
 def index_exists(corpus: str | None = None, variant: str = "default") -> bool:

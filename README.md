@@ -485,6 +485,72 @@ catch 3 of them. The tighter target from Milestone 3 — "4 of 5
 boundary-adjacent questions refused by the gate itself" — now reads 5 of 5,
 clearing even that stricter bar.
 
+## Second Improvement (Stretch)
+
+**Declaring this before building it, per the stretch rules:** I'm adding a
+second measured improvement — hybrid search (BM25 + semantic, via reciprocal
+rank fusion) — even though the first improvement already fully closed the
+gap it targeted. To do this honestly rather than just tuning something
+without a reason, I first expanded the boundary-adjacent test from 5
+questions to 12 (one per topic category — admin, course, dining, housing,
+money, health, study, orientation, transit), to see whether a real weakness
+existed to justify a second fix. All 12 were already refused by the
+threshold-tuned gate, but one was fragile: "Is there a fee for booking a
+study room?" passed at 0.453, only 0.003 above the 0.45 cutoff — close
+enough that a slightly different phrasing could tip it the wrong way. Hybrid
+search is aimed at that fragility, not at a confirmed failure.
+
+**What I changed:** Added a `hybrid` option to `store.py::search`
+(`_hybrid_rerank`). It pulls a larger semantic candidate pool (20 chunks
+instead of 5), reranks them with BM25 keyword-overlap scores using
+reciprocal rank fusion, and returns the fused top-k. The distances reported
+are still the real cosine distances from Chroma, so the 0.45 threshold stays
+comparable. `rank-bm25` was already in `requirements.txt` for this exact
+purpose.
+
+**Run Log — After (hybrid):** produced by
+`python run_eval.py --label after_hybrid --hybrid`
+(`results/run_2026-09-23_2137_after_hybrid.md`), `THRESHOLD = 0.45`,
+`hybrid=True`, everything else unchanged.
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks read as complete thoughts | 5 of 5 | 5/5 | 5/5 | 5/5 | MET (unaffected — chunker untouched) |
+| 5. Cited sources actually contain the answer | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+**The 12-question boundary-adjacent test, semantic-only vs. hybrid:**
+
+| Boundary-adjacent question | Semantic-only | Hybrid | Moved |
+|---|---|---|---|
+| Dean's list GPA | 0.564 | 0.591 | safer |
+| Shuttle to the airport | 0.643 | 0.643 | unchanged |
+| Meal swipe refund | 0.543 | 0.543 | unchanged |
+| Extra credit | 0.531 | 0.531 | unchanged |
+| Bike-share program | 0.694 | 0.694 | unchanged |
+| Free flu shots | 0.763 | 0.763 | unchanged |
+| **Study room fee (the fragile one)** | **0.453** | **0.453** | **unchanged** |
+| Transfer buddy program | 0.710 | 0.737 | safer |
+| International students working off campus | 0.472 | 0.472 | unchanged |
+| Retaking a final exam | 0.476 | 0.476 | unchanged |
+| Dining hall delivery | 0.509 | 0.509 | unchanged |
+| Single room as a sophomore | 0.459 | 0.459 | unchanged |
+
+**Did it help?** A little, but not decisively — and I want to say that
+plainly rather than round it up. All 12 boundary-adjacent questions and all
+5 original criteria still hold with hybrid on, so nothing regressed. 2 of 12
+margins genuinely improved (moved further from the 0.45 cutoff). But the one
+case I actually built this fix to help — the 0.453 study-room-fee
+question — didn't move at all, because BM25 reranking only changes the
+*order* of an already-retrieved candidate pool; it doesn't lower the
+underlying cosine distance of the closest wrong match, which is what the
+gate threshold actually compares against. If I wanted to fix that specific
+fragile case, tuning the threshold slightly lower, or improving chunking
+around `study_group_rooms.txt` so it embeds less closely to "fee" questions,
+would be more direct next steps than reranking.
+
 ## What's Still Broken
 
 Nothing is currently missing against the official 5 criteria in
