@@ -173,6 +173,21 @@ single-topic and a boundary-respecting chunker should split cleanly every
 time — I changed it to a stricter 5 of 5, since I couldn't come up with a
 real reason to expect a failure.
 
+**3.** In Unit 2, after all 5 criteria came back MET with no misses, I asked
+Claude to help me figure out which one to name as "too easy" rather than
+just guessing. It compared all 5 against each other and argued specifically
+for criterion 3, using my own words against it: my `criteria.md` reasoning
+for that criterion said I was leaving room for a miss "in case a future
+out-of-scope question... lands closer to the boundary than the five I
+tested" — but my actual 5 `OUT_OF_SCOPE` questions were nowhere near that
+boundary. It then proposed 5 concrete boundary-adjacent questions (things
+that sound plausible for `campus_life` but aren't covered) to actually test
+that gap. Running them found a real weakness I hadn't noticed — 3 of the 5
+got past the gate and only the generation prompt caught them. I didn't
+change anything about its suggested questions; I asked it to run them
+because I wanted to see whether the argument held up against real data, and
+it did.
+
 ## Stretch Features
 
 I'm adding three stretch features: **metadata filtering**, **conversational
@@ -470,21 +485,62 @@ catch 3 of them. The tighter target from Milestone 3 — "4 of 5
 boundary-adjacent questions refused by the gate itself" — now reads 5 of 5,
 clearing even that stricter bar.
 
-     Milestone 4. -->
-
 ## What's Still Broken
 
-<!-- For each criterion still missed after your fix: what you'd do about it,
-     and why you stopped where you did.
+Nothing is currently missing against the official 5 criteria in
+`criteria.md`, and the tighter target I named in Milestone 3 is now also
+cleared (5 of 5 boundary-adjacent questions refused by the gate). But "not
+currently broken" isn't the same as "fully verified," and I want to be
+honest about the gaps in my own testing rather than imply this is bulletproof.
 
-     "I ran out of time" is fine if it's true. Pretending nothing is left is
-     not.
+- **Only 5 boundary-adjacent questions were tested**, and I picked them
+  myself in one pass. They happened to span admin, transit, dining, and
+  housing topics, but I didn't systematically probe every category the
+  corpus covers (e.g. courses, money, health, orientation) for its own
+  boundary case. There could be a false-positive pattern in a category I
+  didn't think to test.
+- **All 5 of my original test questions are single-fact lookups** (a number,
+  a time, a floor). I haven't tested a question that genuinely requires
+  synthesizing 3+ chunks, or a paraphrased version of the same question
+  worded very differently, which could stress retrieval and generation in
+  ways my current set doesn't.
+- **Sample sizes are small everywhere** — "5 of 5" on 5 questions is a
+  thinner claim than "50 of 50" would be. A single unlucky question could
+  flip a criterion from MET to MISSED next time I test.
 
-     Milestone 5. -->
+What I'd do next: write one boundary-adjacent question per topic category
+(7-8 total, not 5 picked ad hoc) and re-run this same test, since that's the
+exact gap the current test has. I stopped here because the assignment scope
+is one measured improvement, and this one already closed a real, demonstrated
+gap without any regressions — chasing a second improvement without a second
+diagnosed weakness would be tuning without a reason, which is exactly what
+the process this unit is designed to avoid.
 
 ## What I'd Do Differently
 
-<!-- Knowing what you know now — which of your five criteria would you write
-     differently, and why?
+If I were writing these 5 criteria for the first time again, knowing what I
+know now:
+
+**Criterion 3** is the one I'd write differently. The original version ("4
+of 5 out-of-corpus questions refused") doesn't say *how* out-of-corpus —
+and it turns out that distinction matters a lot. I'd write it from the start
+as two-tiered: "4 of 5 *obviously* unrelated questions refused, **and** 4 of
+5 *boundary-adjacent* (plausible-sounding but uncovered) questions refused
+by the gate itself." Writing it that way in Unit 1 would have forced me to
+build the harder test before I had any results to be influenced by, instead
+of discovering the gap only after finding my system passed the easier
+version too comfortably.
+
+**Criteria 1 and 5** I'd leave as-is in wording, but I'd increase the sample
+from 5 questions to something larger (8-10) if I were setting them up again
+— not because the wording was wrong, but because 5-of-5 on 5 questions is a
+weaker signal than the same ratio on a larger set, and I only really
+understood that gap once I was staring at how easily every one of my
+targets got cleared.
+
+Criteria 2 and 4 I wouldn't change — 2 is a prompt-formatting guarantee that
+doesn't need a harder test, and 4's target is validated by a chunking
+strategy I deliberately built to make it near-guaranteed, which is a
+legitimate design choice rather than a safe target.
 
      Milestone 5. -->
