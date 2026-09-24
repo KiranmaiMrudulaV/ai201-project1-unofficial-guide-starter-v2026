@@ -419,32 +419,56 @@ written.
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** Tuned the relevance gate — lowered `THRESHOLD` in
+`config.py` from `0.6` to `0.45`. Nothing else changed: same chunker, same
+top-k, same prompt, same embedding model.
 
-**Why I picked it:**
-
-<!-- Connect it to a specific diagnosis above in one sentence. If you can't,
-     you picked a fix because it sounded impressive. -->
+**Why I picked it:** Directly follows from the Diagnoses section above. The
+mechanism I found was specific to the gate: at 0.6, `gate.py::check` let 3 of
+5 boundary-adjacent questions through to the model (distances 0.531–0.564),
+relying on the prompt layer to catch what the gate should have caught
+itself. My real in-corpus questions never exceed 0.375, so there was room to
+lower the cutoff without risking a false refusal — 0.45 sits in the gap
+between 0.375 (my highest real distance) and 0.531 (my lowest
+boundary-adjacent false-positive), instead of tuning something in the
+chunker or prompt that the diagnosis never actually implicated.
 
 ### Run Log — After
 
-<!-- Same format, same five criteria, three runs each.
-     `python run_eval.py --label after` -->
+Produced by `python run_eval.py --label after`
+(`results/run_2026-09-23_2053_after.md`), `THRESHOLD = 0.45`, everything
+else unchanged from the before run.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunks read as complete thoughts | 5 of 5 | 5/5 | 5/5 | 5/5 | MET (unaffected — chunker untouched) |
+| 5. Cited sources actually contain the answer | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
-**Did it help?**
+**Real output, before vs. after, on the 5 boundary-adjacent questions (the
+actual target of this fix):**
 
-<!-- Say plainly whether it did, and how you know. If it made things worse,
-     say that — a change that backfired, honestly reported, earns full credit
-     and is more interesting than one that worked. What matters is that you can
-     tell.
+| Boundary-adjacent question | Distance | Gate @ 0.6 (before) | Gate @ 0.45 (after) |
+|---|---|---|---|
+| What GPA do I need to make the Dean's list? | 0.564 | let through | **refused** |
+| Is there a shuttle to the airport? | 0.643 | refused | refused |
+| Can I get a refund on unused meal swipes? | 0.543 | let through | **refused** |
+| Do any professors offer extra credit at the end of the semester? | 0.531 | let through | **refused** |
+| Is there a bike-share program on campus? | 0.694 | refused | refused |
+
+Gate-only refusal rate on this harder test went from **2 of 5 → 5 of 5**.
+
+**Did it help?** Yes, and I can show it two ways. First, none of the
+original 5 criteria regressed — all 5 are still MET, with identical
+distances to the before run (`store.py::search` is deterministic; only the
+gate's cutoff comparison changed, not retrieval itself). Second, the
+specific weakness the diagnosis named is fixed: the gate itself now refuses
+all 5 boundary-adjacent questions, instead of needing the prompt layer to
+catch 3 of them. The tighter target from Milestone 3 — "4 of 5
+boundary-adjacent questions refused by the gate itself" — now reads 5 of 5,
+clearing even that stricter bar.
 
      Milestone 4. -->
 
